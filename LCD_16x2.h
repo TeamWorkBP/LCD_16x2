@@ -259,10 +259,10 @@ void LCD_Write(unsigned char value) {
 
 #define LCD_Text_pos(row,col,text) LCD_SetCursor(row,col);LCD_Text(text)
 
-void LCD_Text(unsigned char *text) {
-    while (*text) {
-        LCD_Data(*text);
-        text++;
+void LCD_Text(unsigned char *str) {
+    while (*str) {
+        LCD_Data(*str);
+        str++;
     }
 }
 
