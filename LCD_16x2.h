@@ -171,7 +171,7 @@ unsigned char LCD_Busy(void);
 #define LCD_Command             while(LCD_Busy()){;} LCD_RS = LCD_CMD; LCD_Write
 
 //******************************************************************************
-#define LCD_CharOut             LCD_Data
+#define LCD_Char                LCD_Data
 
 //******************************************************************************
 #define LCD_Data                while(LCD_Busy()){;} LCD_RS = LCD_DATA; LCD_Write
