@@ -216,7 +216,7 @@ void LCD_Init(void) {
     LCD_Command(FOUR_BIT_TWO_LINE);
 #endif
     LCD_Command(DISPLAY_CTRL + DISPLAY_ON); // + BLINK_ON);
-    LCD_Command(ENTRY_MODE + CURSOR_INC + DSHIFT_OFF);
+    LCD_Command(ENTRY_MODE + CURSOR_INC + DISPLAY_SHIFT_OFF);
     LCD_Clear();
     //    LCD_Command(CLEAR_DISPLAY);
     LCD_Home();
