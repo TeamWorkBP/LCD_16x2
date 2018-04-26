@@ -264,7 +264,7 @@ void LCD_Write(unsigned char value) {
 void LCD_Text(unsigned char *str) {
     while (*str) {
         LCD_Data(*str);
-        strr++;
+        str++;
     }
 }
 
