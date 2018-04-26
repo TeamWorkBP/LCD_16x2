@@ -300,7 +300,7 @@ unsigned char LCD_Busy() {
     LCD_DISABLE();
 
     LCD_DIR_OUT();
-    LCD_RW = LCD_WR;
+    LCD_RW = LCD_WRITE;
 
     if (LCD_data.bit7 == LCD_BUSY) {
         LCD_busy_cnt++;
