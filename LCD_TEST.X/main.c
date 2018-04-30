@@ -6,9 +6,9 @@
 //##############################################################################
 //
 //      Autor:              Luis Arenas
-//      Organización:       TeamWork BP
+//      OrganizaciÃ³n:       TeamWork BP
 //
-//      Revisión:           1.0
+//      RevisiÃ³n:           1.0
 //      Fecha:              April. 2018
 //      Compilador:         XC8
 //
@@ -32,20 +32,37 @@ unsigned int cntButton = 0;
 unsigned char btnText[7] = "Btn ?";
 
 void printNumber(unsigned int n) {
-
-    char buf[8 * sizeof (int) + 1]; // Assumes 8-bit chars plus zero byte.
-    char *str = &buf[sizeof (buf) - 1];
-
-    *str = '\0';
-
-    do {
-        char c = n % 10;
-        n /= 10;
-
-        *--str = c + '0';
-    } while (n);
-
-    LCD_Text(str);
+    //int : [-32768 : 32767]
+    //ejemplo: n = 312
+    int div = 10000; //comenzar con (decenas de millar)
+    
+    if (n < 0) { //si es negativo, mostrar signo '-'
+        LCD_Char('-');
+        n = -n;
+    }
+    
+    //buscamos el primer digito
+    //ejemplo: n = 00312
+    //             xx*
+    //(*) se encuentra el primer digito (centenas))
+    while (n / div == 0) {
+        div /= 10;
+    }
+    
+    char digito = 0; //digito a mostrar
+    
+    //Encontrar cada digito en adelante y mostrar en LCD
+    //Ejemplo: n=312
+    //si div es 100, n/div serÃ¡ 3
+    //se muestra el digito encontrado y se resta al numero evaluado
+    //(312-3*100) es 12
+    
+    while (div > 0) {
+        digito = n / div; 
+        n -= digito*div;
+        div /= 10;
+        LCD_Char(digito + '0');
+    }
 }
 
 void main() {
