@@ -31,7 +31,7 @@ unsigned char displayTODO;
 unsigned int cntButton = 0;
 unsigned char btnText[7] = "Btn ?";
 
-void printNumber(unsigned int n) {
+void printNumber(int n) {
     //int : [-32768 : 32767]
     //ejemplo: n = 312
     int div = 10000; //comenzar con (decenas de millar)
