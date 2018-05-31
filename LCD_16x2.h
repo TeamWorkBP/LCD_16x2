@@ -133,7 +133,7 @@
 
 union LCDv8bit {
     char all;
-    
+
     struct {
         unsigned bit0 : 1;
         unsigned bit1 : 1;
@@ -149,41 +149,96 @@ union LCDv8bit {
 union LCDv8bit LCD_data; // bitfield variable (bitwise acess)
 unsigned char LCD_busy_cnt;
 
+char _displaycontrol;
+char _displaymode;
+
 // -------------------- LCD-functions ------------------------------------------
 
 void LCD_Init(void);
-
-void LCD_Write_Nibble(unsigned char value);
-void LCD_Write(unsigned char value);
-
-void LCD_Text(unsigned char *text);
-void LCD_ConstText(const char *text);
-
+void LCD_Write(char value, char mode);
+void LCD_Text(void *text);
+void LCD_CustomChar(void *pt);
 unsigned char LCD_Busy(void);
+
+//******************************************************************************
+#define LCD_Write_Nibble(dato)  LCD_RS = LCD_CMD; LCD_Write(dato,0)
+
+//******************************************************************************
+#define LCD_DISPLAY_CTRL()      LCD_Command((unsigned)DISPLAY_CTRL | _displaycontrol)
+
+//******************************************************************************
+#define LCD_ENTRY_MODE()        LCD_Command((unsigned)ENTRY_MODE | _displaymode)
 
 //******************************************************************************
 #define LCD_Clear()             LCD_Command(CLEAR_DISPLAY)
 
 //******************************************************************************
-#define LCD_Home()              LCD_Command(RETURN_HOME); LCD_DELAY_5MS();
+#define LCD_Home()              LCD_Command(RETURN_HOME)
 
 //******************************************************************************
-#define LCD_Command             while(LCD_Busy()){;} LCD_RS = LCD_CMD; LCD_Write
+#define LCD_Display()           _displaycontrol |= DISPLAY_ON; LCD_DISPLAY_CTRL()
+
+//******************************************************************************
+#define LCD_noDisplay()         _displaycontrol &= ~DISPLAY_ON; LCD_DISPLAY_CTRL()
+
+//******************************************************************************
+#define LCD_Cursor()            _displaycontrol |= CURSOR_ON; LCD_DISPLAY_CTRL()
+
+//******************************************************************************
+#define LCD_noCursor()          _displaycontrol &= ~CURSOR_ON; LCD_DISPLAY_CTRL()
+
+//******************************************************************************
+#define LCD_Blink()             _displaycontrol |= BLINK_ON; LCD_DISPLAY_CTRL()
+
+//******************************************************************************
+#define LCD_noBlink()           _displaycontrol &= ~BLINK_ON; LCD_DISPLAY_CTRL()
+
+//******************************************************************************
+#define LCD_scrollDisplayLeft()  LCD_Command(DISPLAY_SHIFT_L)
+
+//******************************************************************************
+#define LCD_scrollDisplayRight() LCD_Command(DISPLAY_SHIFT_R)
+
+//******************************************************************************
+#define LCD_leftToRight()       _displaymode |= CURSOR_INC;; LCD_ENTRY_MODE()
+
+//******************************************************************************
+#define LCD_rightToLeft()       _displaymode &= ~CURSOR_INC; LCD_ENTRY_MODE()
+
+//******************************************************************************
+#define LCD_Autoscroll()        _displaymode |= DISPLAY_SHIFT_ON;; LCD_ENTRY_MODE()
+
+//******************************************************************************
+#define LCD_noAutoscroll()      _displaymode &= ~DISPLAY_SHIFT_ON; LCD_ENTRY_MODE()
+
+//******************************************************************************
+#define LCD_Command(dato)       while(LCD_Busy()); LCD_RS = LCD_CMD; LCD_Write(dato,1)
+
+//******************************************************************************
+#define LCD_Data(dato)          while(LCD_Busy()); LCD_RS = LCD_DATA; LCD_Write(dato,1)
+
+//******************************************************************************
+#define LCD_CreateChar(pos,v)   LCD_CustomMem(pos); LCD_CustomChar(v)
 
 //******************************************************************************
 #define LCD_Char                LCD_Data
 
 //******************************************************************************
-#define LCD_Data                while(LCD_Busy()){;} LCD_RS = LCD_DATA; LCD_Write
+#define LCD_Char_pos(row,col,c) LCD_SetCursor(row,col); LCD_Data(c)
 
 //******************************************************************************
 #define LCD_SetCursor(r,c)      LCD_Command(CURSOR_ADDR + (LINE_OFFSET * r) + c)
 
 //******************************************************************************
+#define LCD_CustomMem(loc)      LCD_Command(CGRAM_ADDR | ((loc & 0x7) << 3))
+
+//******************************************************************************
 
 void LCD_Init(void) {
+#ifdef LCD_RW
     LCD_RW_DIR = 0;
     LCD_RW = 0;
+#endif
     LCD_RS_DIR = 0;
     LCD_RS = 0;
     LCD_E_DIR = 0;
@@ -215,71 +270,91 @@ void LCD_Init(void) {
     } // wait
     LCD_Command(FOUR_BIT_TWO_LINE);
 #endif
-    LCD_Command(DISPLAY_CTRL + DISPLAY_ON);
-    LCD_Command(ENTRY_MODE + CURSOR_INC + DISPLAY_SHIFT_OFF);
+    _displaycontrol = DISPLAY_ON | CURSOR_OFF | BLINK_OFF;
+    LCD_DISPLAY_CTRL();
+    _displaymode = CURSOR_INC | DISPLAY_SHIFT_OFF;
+    LCD_ENTRY_MODE();
     LCD_Clear();
     LCD_Home();
 }
 
 //******************************************************************************
 
-void LCD_Write_Nibble(unsigned char value) {
+void LCD_Write(char value, char mode) {
     LCD_data.all = value;
-    LCD_RS = LCD_CMD;
+#ifdef LCD_RW
     LCD_RW = LCD_WRITE;
-
-    LCD_D4_OUT = LCD_data.bit4;
-    LCD_D5_OUT = LCD_data.bit5;
-    LCD_D6_OUT = LCD_data.bit6;
-    LCD_D7_OUT = LCD_data.bit7;
-    LCD_STROBE();
-}
-
-//******************************************************************************
-
-void LCD_Write(unsigned char value) {
-    LCD_data.all = value;
-    LCD_RW = LCD_WRITE;
-
+#endif
     LCD_D7_OUT = LCD_data.bit7;
     LCD_D6_OUT = LCD_data.bit6;
     LCD_D5_OUT = LCD_data.bit5;
     LCD_D4_OUT = LCD_data.bit4;
 #ifndef LCD_USE_8BIT_DATA
     LCD_STROBE();
+    if (mode) {
 #endif
-    LCD_D3_OUT = LCD_data.bit3;
-    LCD_D2_OUT = LCD_data.bit2;
-    LCD_D1_OUT = LCD_data.bit1;
-    LCD_D0_OUT = LCD_data.bit0;
-    LCD_STROBE();
+        LCD_D3_OUT = LCD_data.bit3;
+        LCD_D2_OUT = LCD_data.bit2;
+        LCD_D1_OUT = LCD_data.bit1;
+        LCD_D0_OUT = LCD_data.bit0;
+        LCD_STROBE();
+#ifndef LCD_USE_8BIT_DATA
+    }
+#endif
 }
 
 //******************************************************************************
 
 #define LCD_Text_pos(row,col,text) LCD_SetCursor(row,col);LCD_Text(text)
 
-void LCD_Text(unsigned char *str) {
-    while (*str) {
-        LCD_Data(*str);
-        str++;
+void LCD_Text(void *pt) {
+    unsigned char *text = pt;
+    while (*text) {
+        LCD_Data(*text);
+        text++;
     }
 }
 
 //******************************************************************************
 
-#define LCD_ConstText_pos(row,col,text) LCD_SetCursor(row,col);LCD_ConstText(text)
+void LCD_CustomChar(void *pt) {
+    unsigned char *c = pt;
+    for (char i = 0; i < 8; i++) {
+        LCD_Data(*c);
+        c++;
+    }
+}
 
-void LCD_ConstText(const char *str) {
-    while (*str) {
-        LCD_Data(*str);
-        str++;
+//******************************************************************************
+
+#define LCD_PrintNumber(num) LCD_print_number((unsigned long)num,num > 0 ? 0 : 1u)
+#define LCD_PrintNumber_pos(row,col,num) LCD_SetCursor(row,col);LCD_PrintNumber(num)
+
+void LCD_print_number(unsigned long num, char sign) {
+    if (num == 0) {
+        LCD_Char('0');
+        return;
+    }
+    if (sign) {
+        LCD_Char('-');
+        num = ~num + 1;
+    }
+    unsigned long lcd_div = 1000000000;
+    while (num / lcd_div == 0) {
+        lcd_div /= 10;
+    }
+    while (lcd_div) {
+        char c = num / lcd_div;
+        LCD_Data('0' + c);
+        num %= lcd_div;
+        lcd_div /= 10;
     }
 }
 
 //******************************************************************************
 
 unsigned char LCD_Busy() {
+#ifdef LCD_RW
     if (LCD_busy_cnt >= LCD_TIMEOUT) {
         LCD_busy_cnt = 1;
         return 0;
@@ -299,6 +374,7 @@ unsigned char LCD_Busy() {
 
     LCD_DIR_OUT();
     LCD_RW = LCD_WRITE;
+    //LCD_DELAY_5MS();
 
     if (LCD_data.bit7 == LCD_BUSY) {
         LCD_busy_cnt++;
@@ -307,6 +383,9 @@ unsigned char LCD_Busy() {
         LCD_busy_cnt = 1;
         return 0;
     }
+#else
+    __delay_ms(5);
+    return 0;
+#endif
 }
-
 #endif	/* LCD_16X2_H */
