@@ -1,101 +1,99 @@
-//##############################################################################
-//    	filename:        	main.c
-//
-//     	Archivo principal del proyecto LCD_TEST
-//
-//##############################################################################
-//
-//      Autor:              Luis Arenas
-//      Organizaci√≥n:       TeamWork BP
-//
-//      Revisi√≥n:           1.0
-//      Fecha:              April. 2018
-//      Compilador:         XC8
-//
-//##############################################################################
+/*
+ * File:   main.c
+ * Author: Luis Arenas
+ *
+ * DemostraciÛn del uso de la libreria LCD_16x2
+ * 
+ * Created on 23 de mayo de 2019, 09:22 AM
+ */
 
-#include <xc.h>           // XC8 compiler
+
+#include <xc.h>
+#include "fuses.h"
 #define _XTAL_FREQ 1000000
 
-#include "fuses.h"
 #include "LCD_16x2.h"
 
+char msg1[] = "Hola Mundo";
+char msg2[] = "Quien eres?";
+char msg3[] = {1, 2, '_', '(', 194, ')', '_', '/', 1}; //"Ø\_(?)_/Ø";
+char msg4[] = {'(', 3, '_', 3, ')'};
 
-#define BUTTON          PORTBbits.RB0
-#define BUTTON_TRI      TRISBbits.TRISB0
+char C1[] = {0x1F, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
+char C2[] = {0x00, 0x10, 0x08, 0x04, 0x02, 0x01, 0x00};
+char C3[] = {0x00, 0x00, 0x1F, 0x0A, 0x0A, 0x0A, 0x0A};
 
-#define OUTPUT_PIN      0
-#define INPUT_PIN       1
-
-unsigned char displayTODO;
-unsigned int cntButton = 0;
-unsigned char btnText[7] = "Btn ?";
-
-void printNumber(int n) {
-    //int : [-32768 : 32767]
-    //ejemplo: n = 312
-    int div = 10000; //comenzar con (decenas de millar)
-    
-    if (n < 0) { //si es negativo, mostrar signo '-'
-        LCD_Char('-');
-        n = -n;
-    }
-    
-    //buscamos el primer digito
-    //ejemplo: n = 00312
-    //             xx*
-    //(*) se encuentra el primer digito (centenas))
-    while (n / div == 0) {
-        div /= 10;
-    }
-    
-    char digito = 0; //digito a mostrar
-    
-    //Encontrar cada digito en adelante y mostrar en LCD
-    //Ejemplo: n=312
-    //si div es 100, n/div ser√° 3
-    //se muestra el digito encontrado y se resta al numero evaluado
-    //(312-3*100) es 12
-    
-    while (div > 0) {
-        digito = n / div; 
-        n -= digito*div;
-        div /= 10;
-        LCD_Char(digito + '0');
-    }
-}
-
-void main() {
-
-    ADCON1 = 0x0F; // pins digital IO
-    TRISC = 0x00;
-    PORTC = 0x00;
-
-    displayTODO = 0;
-
+void main(void) {
+    ADCON1 = 0x0F;
     LCD_Init();
-
-    BUTTON_TRI = INPUT_PIN;
-
-    LCD_ConstText_pos(0, 0, "23.04.18");
-
-    LCD_Text_pos(1, 0, btnText);
-
-    LCD_Command(DISPLAY_CTRL + DISPLAY_ON); // + CURSOR_ON );
-    LCD_SetCursor(1, 3);
-
+    LCD_CreateChar(1, C1);
+    LCD_CreateChar(2, C2);
+    LCD_CreateChar(3, C3);
+    LCD_SetCursor(0, 0);
+    LCD_Text("Testeo....");
+    LCD_SetCursor(1, 0);
+    LCD_Cursor();
+    LCD_Blink();
+    char i, j;
+    char valid;
     while (1) {
-        if (BUTTON == 0) {
-            while (BUTTON == 0);
-            cntButton++;
-            displayTODO = 1;
-        }
-
-        if (displayTODO) {
-            LCD_SetCursor(1, 4);
-            printNumber(cntButton);
-            displayTODO = 0;
+        //mensaje 1
+        for (j = 0; j < 4; j++) {
+            LCD_SetCursor(1, 0);
+            LCD_Blink();
+            __delay_ms(1500);
+            LCD_leftToRight();
+            i = 0;
+            LCD_noBlink();
+            do {
+                switch (j) {
+                    case 0:
+                        valid = i < (sizeof (msg1) - 2);
+                        LCD_Char(msg1[i]);
+                        break;
+                    case 1:
+                        valid = i < (sizeof (msg2) - 2);
+                        LCD_Char(msg2[i]);
+                        break;
+                    case 2:
+                        valid = i < (sizeof (msg3) - 1);
+                        LCD_Char(msg3[i]);
+                        break;
+                    default:
+                        valid = i < (sizeof (msg4) - 1);
+                        LCD_Char(msg4[i]);
+                        break;
+                }
+                i++;
+                __delay_ms(150);
+            } while (valid);
+            LCD_Blink();
+            __delay_ms(1000);
+            LCD_rightToLeft();
+            i = 0;
+            LCD_noBlink();
+            do {
+                switch (j) {
+                    case 0:
+                        valid = i < (sizeof (msg1));
+                        break;
+                    case 1:
+                        valid = i < (sizeof (msg2));
+                        break;
+                    case 2:
+                        valid = i < (sizeof (msg3));
+                        break;
+                    default:
+                        valid = i < (sizeof (msg4));
+                        break;
+                }
+                LCD_Char(' ');
+                i++;
+                __delay_ms(50);
+            } while (valid);
         }
     }
-}
+    LCD_Text(msg3);
 
+    return;
+}
